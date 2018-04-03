@@ -5,6 +5,8 @@ class DrizzleContract {
     this.web3 = web3
     this.store = store
 
+    this.initContractState();
+
     // Instantiate the contract.
     var web3Contract = new web3.eth.Contract(
       this.abi,
@@ -31,7 +33,6 @@ class DrizzleContract {
       }
     }
 
-    this.initContractState();
 
     // Register event listeners if any events.
     if (events.length > 0) {
@@ -43,8 +44,10 @@ class DrizzleContract {
     }
 
     const name = contractArtifact.contractName
+    const methods = this.methods
+    const address = this._address
 
-    store.dispatch({type: 'CONTRACT_INITIALIZED', name})
+    store.dispatch({type: 'CONTRACT_INITIALIZED', name, methods, address})
   }
 
   initContractState() {
@@ -56,8 +59,7 @@ class DrizzleContract {
       initialized: false,
       synced: false,
       state: {},
-      methods: this.methods,
-      address: this._address
+      networks: this.contractArtifact.networks
     }
 
     // Constant getters

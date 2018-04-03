@@ -24,6 +24,8 @@ const contractsReducer = (state = initialState, action) => {
         initialized: true,
         synced: true,
         events: [],
+        methods: action.methods,
+        address: action.address,
       }
     }
   }

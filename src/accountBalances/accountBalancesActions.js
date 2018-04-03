@@ -1,17 +1,8 @@
-const ACCOUNTS_FETCHING = 'ACCOUNTS_FETCHING'
+const ACCOUNT_BALANCE_FETCHED = 'ACCOUNT_BALANCE_FETCHED'
 
-export function accountsFetching(results) {
+export function accountBalanceFetched(results) {
   return {
-    type: ACCOUNTS_FETCHING,
-    payload: results
-  }
-}
-
-const ACCOUNTS_FETCHED = 'ACCOUNTS_FETCHED'
-
-export function accountsFetched(results) {
-  return {
-    type: ACCOUNTS_FETCHED,
+    type: ACCOUNT_BALANCE_FETCHED,
     payload: results
   }
 }
