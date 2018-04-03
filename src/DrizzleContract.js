@@ -90,16 +90,16 @@ class DrizzleContract {
 
       // If call result is in state and fresh, return value instead of calling
       if (argsHash in functionState) {
-        if (contract.store.getState().contracts[contractName].synced === true) {
-          return argsHash
-        }
+        // if (contract.store.getState().contracts[contractName].synced === true) {
+          return functionState[argsHash].value;
+        // }
       }
 
       // Otherwise, call function and update store
       contract.store.dispatch({type: 'CALL_CONTRACT_FN', contract, fnName, fnIndex, args, argsHash})
 
       // Return nothing because state is currently empty.
-      return argsHash
+      return null;
     }
   }
 
