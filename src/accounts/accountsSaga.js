@@ -10,6 +10,7 @@ export function* getAccounts(action) {
   const web3 = action.web3
 
   try {
+    if (!web3) throw 'missing web3';
     const accounts = yield call(web3.eth.getAccounts)
 
     if (!accounts) {

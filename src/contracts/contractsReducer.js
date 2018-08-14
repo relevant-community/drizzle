@@ -37,7 +37,8 @@ const contractsReducer = (state = initialState, action) => {
       ...state,
       [contractName]: {
         ...state[contractName],
-        synced: false
+        synced: false,
+        syncing: true
       }
     }
   }
@@ -48,7 +49,8 @@ const contractsReducer = (state = initialState, action) => {
       ...state,
       [action.contractName]: {
         ...state[action.contractName],
-        synced: true
+        synced: true,
+        syncing: false
       }
     }
   }
@@ -83,6 +85,7 @@ const contractsReducer = (state = initialState, action) => {
               args: action.args,
               fnIndex: action.fnIndex,
               value: action.value,
+              syncing: false
             }
           }
         }
@@ -105,6 +108,7 @@ const contractsReducer = (state = initialState, action) => {
               args: action.args,
               fnIndex: action.fnIndex,
               error: action.error,
+              syncing: false
             }
           }
         }

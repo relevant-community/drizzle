@@ -2,8 +2,9 @@ import { END, eventChannel } from 'redux-saga'
 import { call, put, select, take, takeLatest, takeEvery } from 'redux-saga/effects'
 import DrizzleContract from '../DrizzleContract'
 
-export function* addContract({drizzle, contractConfig, events, web3}) {
+export function* addContract({drizzle, contractConfig, events, web3, fallback, address}) {
   // Prevents double-adding contracts
+  if (!drizzle) return;
   if (drizzle.loadingContract[contractConfig.contractName]) { return false }
 
   drizzle.loadingContract[contractConfig.contractName] = true
@@ -12,37 +13,60 @@ export function* addContract({drizzle, contractConfig, events, web3}) {
 
   let drizzleContract
 
-  if (contractConfig.web3Contract) {
-    drizzleContract = yield call(instantiateWeb3Contract, {web3Contract: contractConfig.web3Contract, name: contractConfig.contractName, events, store: drizzle.store, web3})
-  } else {
-    drizzleContract = yield call(instantiateContract, {contractArtifact: contractConfig, events, store: drizzle.store, web3})
-  }
+  // if (contractConfig.web3Contract) {
+    // drizzleContract = yield call(instantiateWeb3Contract, {web3Contract: contractConfig.web3Contract, name: contractConfig.contractName, events, store: drizzle.store, web3, fallback})
+  // } else {
+  drizzleContract = yield call(instantiateContract, {contractArtifact: contractConfig, events, store: drizzle.store, web3, fallback, address: address})
+  // }
   let contract = drizzle._addContract(drizzleContract)
-  yield put({type: 'CONTRACT_INITIALIZED', name: contractConfig.contractName, contract})
+  yield put({type: 'CONTRACT_INITIALIZED', name: address || contractConfig.contractName, contract})
 }
 
 /*
  * Instantiation
  */
 
-export function* instantiateWeb3Contract({web3Contract, name, events, store, web3}) {
+export function* instantiateWeb3Contract({web3Contract, name, events, store, web3, fallback}) {
   return new DrizzleContract(web3Contract, web3, name, store, events)
 }
 
-export function* instantiateContract({contractArtifact, events, store, web3}) {
+export function* instantiateContract({contractArtifact, events, store, web3, fallback, address}) {
   const networkId = yield select(getNetworkId)
+  const fallbackNetworkId = yield select(getFallbackNetworkId)
+  var web3Contract
+  var fallbackContract;
 
   // Instantiate the contract.
-  var web3Contract = new web3.eth.Contract(
-    contractArtifact.abi,
-    contractArtifact.networks[networkId].address,
-    {
-      from: store.getState().accounts[0],
-      data: contractArtifact.deployedBytecode
-    }
-  )
+  if (web3) {
+    web3Contract = new web3.eth.Contract(
+      contractArtifact.abi,
+      address || contractArtifact.networks[networkId].address,
+      {
+        from: store.getState().accounts[0],
+        data: contractArtifact.deployedBytecode
+      }
+    )
+  }
 
-  return new DrizzleContract(web3Contract, web3, contractArtifact.contractName, store, events, contractArtifact)
+  if (fallback) {
+    fallbackContract = new fallback.eth.Contract(
+      contractArtifact.abi,
+      address || contractArtifact.networks[fallbackNetworkId].address,
+      {
+        data: contractArtifact.deployedBytecode
+      }
+    )
+  }
+
+  // if websocket provider, then wait for websocket to connect;
+  if (fallback) {
+    yield fallback.currentProvider.on('connect', e => {
+      return new DrizzleContract(web3Contract, web3, address || contractArtifact.contractName, store, events, contractArtifact, fallbackContract)
+    });
+  }
+
+  return new DrizzleContract(web3Contract, web3, address || contractArtifact.contractName, store, events, contractArtifact, fallbackContract)
+
 }
 
 /*
@@ -52,8 +76,12 @@ export function* instantiateContract({contractArtifact, events, store, web3}) {
 function createContractEventChannel({contract, eventName, eventOptions}) {
   const name = contract.contractName
 
+  // if we have a ws fallback - user that for events
+  const eventEnabledContract = contract.fallbackContract || contract
+
   return eventChannel(emit => {
-    const eventListener = contract.events[eventName](eventOptions).on('data', event => {
+    const eventListener = eventEnabledContract.events[eventName](eventOptions)
+    .on('data', event => {
       emit({type: 'EVENT_FIRED', name, event})
     })
     .on('changed', event => {
@@ -250,6 +278,7 @@ function* callSyncContract(action) {
 
 const getContractsState = (state) => state.contracts
 const getNetworkId = (state) => state.web3.networkId
+const getFallbackNetworkId = (state) => state.web3.fallbackNetworkId
 
 function isSendOrCallOptions(options) {
   if ('from' in options) return true

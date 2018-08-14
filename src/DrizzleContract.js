@@ -1,20 +1,27 @@
+import merge from 'deepmerge'
+
 class DrizzleContract {
-  constructor(web3Contract, web3, name, store, events = [], contractArtifact = {}) {
-    this.abi = web3Contract.options.jsonInterface
-    this.address = web3Contract.options.address
+  constructor(web3Contract, web3, name, store, events = [], contractArtifact = {}, fallbackContract) {
+    var contract = web3Contract || fallbackContract;
+
+    this.abi = contract.options.jsonInterface
+    this.address = contract.options.address
     this.web3 = web3
     this.contractName = name
     this.contractArtifact = contractArtifact
     this.store = store
+    this.fallbackContract = fallbackContract;
 
     // Merge web3 contract instance into DrizzleContract instance.
-    Object.assign(this, web3Contract)
+    Object.assign(this, contract)
+
 
     for (var i = 0; i < this.abi.length; i++) {
       var item = this.abi[i]
 
       if (item.type == "function" && item.constant === true) {
         this.methods[item.name].cacheCall = this.cacheCallFunction(item.name, i)
+        this.methods[item.name].fromCache = this.fromCacheFunction(item.name, i)
       }
 
       if (item.type == "function" && item.constant === false) {
@@ -38,7 +45,7 @@ class DrizzleContract {
 
   }
 
-  cacheCallFunction(fnName, fnIndex, fn) {
+  fromCacheFunction(fnName, fnIndex, fn) {
     var contract = this
 
     return function() {
@@ -54,9 +61,26 @@ class DrizzleContract {
       const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
       // If call result is in state return value instead of calling
-      if (argsHash in functionState) {
+      if (argsHash in functionState && functionState[argsHash].value) {
         return functionState[argsHash].value;
       }
+    }
+  }
+
+  cacheCallFunction(fnName, fnIndex, fn) {
+    var contract = this
+
+    return function() {
+      // Collect args and hash to use as key, 0x0 if no args
+      var argsHash = '0x0'
+      var args = arguments
+
+      if (args.length > 0) {
+        argsHash = contract.generateArgsHash(args)
+      }
+
+      const contractName = contract.contractName
+      const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
       // Otherwise, call function and update store
       contract.store.dispatch({type: 'CALL_CONTRACT_FN', contract, fnName, fnIndex, args, argsHash})

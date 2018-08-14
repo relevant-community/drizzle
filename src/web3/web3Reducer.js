@@ -31,7 +31,8 @@ const web3Reducer = (state = initialState, action) => {
   {
     return {
       ...state,
-      networkId: action.networkId
+      networkId: action.networkId,
+      fallbackNetworkId: action.fallbackNetworkId,
     }
   }
 

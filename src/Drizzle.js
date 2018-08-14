@@ -14,6 +14,7 @@ class Drizzle {
 
     this.loadingContract = {}
 
+    this.addContract = this.addContract.bind(this);
     // Wait for window load event in case of injected web3.
     windowPromise.then(() => {
       // Begin Drizzle initialization.
@@ -21,8 +22,9 @@ class Drizzle {
     })
   }
 
-  addContract (contractConfig, events = []) {
-    this.store.dispatch({type: 'ADD_CONTRACT', drizzle: this, contractConfig, events, web3: this.web3})
+  addContract (contractConfig, options) {
+    options.name ? contractConfig.contractName = options.name : null;
+    this.store.dispatch({type: 'ADD_CONTRACT', drizzle: this, contractConfig, events: options.events, web3: this.web3, fallback: this.fallback, address: options.address})
   }
 
   _addContract (drizzleContract) {

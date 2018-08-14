@@ -9,7 +9,8 @@ var Web3 = require('web3')
 export function* initializeWeb3({options}) {
 
   try {
-    var web3 = {}
+    var web3;
+    var fallback;
 
     // Checking if Web3 has been injected by the browser (Mist/MetaMask)
     if (typeof window.web3 !== 'undefined') {
@@ -19,36 +20,50 @@ export function* initializeWeb3({options}) {
 
       console.log('Injected web3 detected.')
 
-      yield put({type: 'WEB3_INITIALIZED'})
-      
-      return web3
-    } else {
-      if (options.fallback) {
-        // Attempt fallback if no web3 injection.
-        console.log('No web3 instance injected, using fallback.')
 
-        switch (options.fallback.type) {
-          case 'ws':
-            var provider = new Web3.providers.WebsocketProvider(options.fallback.url)
-            web3 = new Web3(provider)
-
-            // Attach drizzle functions
-            web3.eth['cacheSendTransaction'] = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
-
-            yield put({type: 'WEB3_INITIALIZED'})
-
-            return web3
-
-            break
-          default:
-            // Invalid options; throw.
-            throw "Invalid web3 fallback provided."
-        }
-      }
-
-      // Out of web3 options; throw.
-      throw "Cannot find injected web3 or valid fallback."
     }
+
+    if (options.fallback) {
+      // Attempt fallback if no web3 injection.
+      console.log('Connecting fallback provider.')
+
+      switch (options.fallback.type) {
+        case 'ws':
+          var provider = new Web3.providers.WebsocketProvider(options.fallback.url)
+
+          fallback = new Web3(provider)
+
+          provider.on('error', e => console.log('WS Error', e));
+          provider.on('end', e => {
+            console.log('WS closed');
+            console.log('Attempting to reconnect...');
+            provider = new Web3.providers.WebsocketProvider(options.fallback.url);
+
+            provider.on('connect', function () {
+                console.log('WSS Reconnected');
+            });
+
+            fallback.setProvider(provider);
+          });
+
+
+
+          // Attach drizzle functions
+          fallback.eth['cacheSendTransaction'] = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
+
+          break
+        default:
+          // Invalid options; throw.
+          // throw "Invalid web3 fallback provided."
+      }
+    }
+    if (!web3 && !fallback) {
+      throw 'missing web3 privider'
+    }
+
+    yield put({type: 'WEB3_INITIALIZED'})
+
+    return { web3, fallback }
   }
   catch (error) {
     yield put({type: 'WEB3_FAILED', error})
@@ -61,11 +76,17 @@ export function* initializeWeb3({options}) {
  * Network ID
  */
 
-export function* getNetworkId({web3}) {
+export function* getNetworkId({web3, options}) {
   try {
-    const networkId = yield call(web3.eth.net.getId)
+    var networkId;
+    var fallbackNetworkId;
+    if (web3)
+      networkId = yield call(web3.eth.net.getId)
 
-    yield put({type: 'NETWORK_ID_FETCHED', networkId})
+    if (options.fallback && options.fallback.networkId)
+      fallbackNetworkId = options.fallback.networkId
+
+    yield put({type: 'NETWORK_ID_FETCHED', networkId, fallbackNetworkId})
 
     return networkId
   }
@@ -126,7 +147,7 @@ function* callSendTx({txObject, stackId, web3}) {
 }
 
 function* web3Saga() {
-  yield takeLatest('NETWORK_ID_FETCHING', getNetworkId)
+  yield takeLatest('NETWORK_ID_FAILED', getNetworkId)
   yield takeEvery('SEND_WEB3_TX', callSendTx)
 }
 
