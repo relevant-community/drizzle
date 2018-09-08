@@ -58,13 +58,17 @@ export function* instantiateContract({contractArtifact, events, store, web3, fal
     )
   }
 
+  // TODO better logic - wait for connection!
   // if websocket provider, then wait for websocket to connect;
-  if (fallback) {
-    yield fallback.currentProvider.on('connect', e => {
-      return new DrizzleContract(web3Contract, web3, address || contractArtifact.contractName, store, events, contractArtifact, fallbackContract)
-    });
-  }
-
+  // if (fallback) {
+  //   console.log('instantiate contract ', address);
+  //   yield fallback.currentProvider.on('connect', e => {
+  //     console.log('connected, get events for ', address || contractArtifact.contractName);
+  //     return new DrizzleContract(web3Contract, web3, address || contractArtifact.contractName, store, events, contractArtifact, fallbackContract)
+  //   });
+  // }
+  // this is called twice right now
+  // console.log('new contract ', address || contractArtifact.contractName);
   return new DrizzleContract(web3Contract, web3, address || contractArtifact.contractName, store, events, contractArtifact, fallbackContract)
 
 }
@@ -76,18 +80,22 @@ export function* instantiateContract({contractArtifact, events, store, web3, fal
 function createContractEventChannel({contract, eventName, eventOptions}) {
   const name = contract.contractName
 
-  // if we have a ws fallback - user that for events
+  // if we have a ws fallback - use that for events
   const eventEnabledContract = contract.fallbackContract || contract
+  console.log('listend for events');
 
   return eventChannel(emit => {
     const eventListener = eventEnabledContract.events[eventName](eventOptions)
     .on('data', event => {
+      console.log('event ', event);
       emit({type: 'EVENT_FIRED', name, event})
     })
     .on('changed', event => {
+      console.log('changed ', event);
       emit({type: 'EVENT_CHANGED', name, event})
     })
     .on('error', error => {
+      console.log('error ', error);
       emit({type: 'EVENT_ERROR', name, error})
       emit(END)
     })
@@ -102,12 +110,37 @@ function createContractEventChannel({contract, eventName, eventOptions}) {
 
 function* callListenForContractEvent({contract, eventName, eventOptions}) {
   const contractEventChannel = yield call(createContractEventChannel, {contract, eventName, eventOptions})
-
   while (true) {
     var event = yield take(contractEventChannel)
     yield put(event)
   }
 }
+
+
+function* callGetContractEvent({contract, eventName, eventOptions}) {
+  const eventEnabledContract = contract.fallbackContract || contract
+  const name = contract.contractName || contract.address
+  let events;
+
+  try {
+    events = yield eventEnabledContract.getPastEvents(eventName, {
+      // filter: {_from: addr},
+      fromBlock: 0,
+      toBlock: 'latest'
+    })
+  } catch (e) {
+    console.log('error getting events manually', e);
+  }
+
+  if (!events) return;
+
+  for(let i = 0; i< events.length; i++) {
+    let event = events[i];
+    yield put({type: 'EVENT_FIRED', name, event})
+  }
+}
+
+
 
 /*
  * Send and Cache
@@ -293,8 +326,9 @@ function* contractsSaga() {
   yield takeEvery('SEND_CONTRACT_TX', callSendContractTx)
   yield takeEvery('CALL_CONTRACT_FN', callCallContractFn)
   yield takeEvery('CONTRACT_SYNCING', callSyncContract)
-  yield takeEvery('LISTEN_FOR_EVENT', callListenForContractEvent)
+  yield takeEvery('LISTEN_FOR_EVENT', callGetContractEvent)
   yield takeEvery('ADD_CONTRACT', addContract)
+  yield takeEvery('GET_CONTRACT_EVENT', callGetContractEvent)
 }
 
 export default contractsSaga;

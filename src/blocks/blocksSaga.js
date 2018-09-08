@@ -20,6 +20,7 @@ function createBlockChannel({drizzle, web3, syncAlways}) {
       }
     })
     .on('data', (blockHeader) => {
+      console.log('blockHeader', blockHeader);
       emit({type: 'BLOCK_RECEIVED', blockHeader, drizzle, web3, syncAlways})
     })
     .on('error', error => {
@@ -96,8 +97,13 @@ function* processBlockHeader({blockHeader, drizzle, web3, syncAlways}) {
   const blockNumber = blockHeader.number
 
   try {
-    const block = yield call(web3.eth.getBlock, blockNumber, true)
+    let block = yield call(web3.eth.getBlock, blockNumber, true)
 
+    if (!block) {
+      // sometimes block is null with ws :(
+      // block = yield call(web3.eth.getBlock, blockNumber, true)
+      throw new Error('missing block number ' + blockNumber);
+    }
     yield call(processBlock, {block, drizzle, web3, syncAlways})
   }
   catch (error) {
@@ -122,6 +128,7 @@ function* processBlock({block, drizzle, web3, syncAlways}) {
       return
     }
 
+    console.log(block);
     const txs = block.transactions
 
     if (txs.length > 0)

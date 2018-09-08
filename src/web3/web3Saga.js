@@ -19,13 +19,11 @@ export function* initializeWeb3({options}) {
       web3.eth.cacheSendTransaction = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
 
       console.log('Injected web3 detected.')
-
-
     }
 
-    if (options.fallback) {
+    if (options.fallback && options.fallback.url) {
       // Attempt fallback if no web3 injection.
-      console.log('Connecting fallback provider.')
+      console.log('Connecting ws provider.')
 
       switch (options.fallback.type) {
         case 'ws':
@@ -40,13 +38,14 @@ export function* initializeWeb3({options}) {
             provider = new Web3.providers.WebsocketProvider(options.fallback.url);
 
             provider.on('connect', function () {
+                // TODO trigger reconnect
                 console.log('WSS Reconnected');
             });
 
             fallback.setProvider(provider);
           });
 
-
+          yield connectWebSocket(provider);
 
           // Attach drizzle functions
           fallback.eth['cacheSendTransaction'] = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
@@ -70,6 +69,13 @@ export function* initializeWeb3({options}) {
     console.error('Error intializing web3:')
     console.error(error)
   }
+}
+
+export function connectWebSocket(provider) {
+    return new Promise((resolve, reject) => {
+      provider.on('connect', e => resolve());
+      provider.on('error', e => reject());
+    });
 }
 
 /*

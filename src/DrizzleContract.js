@@ -58,6 +58,7 @@ class DrizzleContract {
       }
 
       const contractName = contract.contractName
+      if (!contract.store.getState().contracts[contractName].state) return;
       const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
       // If call result is in state return value instead of calling
@@ -80,6 +81,7 @@ class DrizzleContract {
       }
 
       const contractName = contract.contractName
+      if (!contract.store.getState().contracts[contractName].state) return;
       const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
       // Otherwise, call function and update store

@@ -14,7 +14,7 @@ function* initializeDrizzle(action) {
     const drizzle = action.drizzle
 
     // Initialize web3 and get the current network ID.
-    var {fallback, web3} = yield call(initializeWeb3, {options: web3Options})
+    var {web3, fallback} = yield call(initializeWeb3, {options: web3Options})
     drizzle.web3 = web3
     drizzle.fallback = fallback
 
