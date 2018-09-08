@@ -82,20 +82,16 @@ function createContractEventChannel({contract, eventName, eventOptions}) {
 
   // if we have a ws fallback - use that for events
   const eventEnabledContract = contract.fallbackContract || contract
-  console.log('listend for events');
 
   return eventChannel(emit => {
     const eventListener = eventEnabledContract.events[eventName](eventOptions)
     .on('data', event => {
-      console.log('event ', event);
       emit({type: 'EVENT_FIRED', name, event})
     })
     .on('changed', event => {
-      console.log('changed ', event);
       emit({type: 'EVENT_CHANGED', name, event})
     })
     .on('error', error => {
-      console.log('error ', error);
       emit({type: 'EVENT_ERROR', name, error})
       emit(END)
     })
@@ -115,6 +111,13 @@ function* callListenForContractEvent({contract, eventName, eventOptions}) {
     yield put(event)
   }
 }
+
+// function* callPollContractEvent({contract, eventName, eventOptions}) {
+//   setInterval(() => {
+//     console.log('polling events');
+//     callGetContractEvent({contract, eventName, eventOptions});
+//   }, 3000);
+// }
 
 
 function* callGetContractEvent({contract, eventName, eventOptions}) {
@@ -326,6 +329,9 @@ function* contractsSaga() {
   yield takeEvery('SEND_CONTRACT_TX', callSendContractTx)
   yield takeEvery('CALL_CONTRACT_FN', callCallContractFn)
   yield takeEvery('CONTRACT_SYNCING', callSyncContract)
+
+  // yield takeEvery('LISTEN_FOR_EVENT', callPollContractEvent)
+
   yield takeEvery('LISTEN_FOR_EVENT', callGetContractEvent)
   yield takeEvery('ADD_CONTRACT', addContract)
   yield takeEvery('GET_CONTRACT_EVENT', callGetContractEvent)

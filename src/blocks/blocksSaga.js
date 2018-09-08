@@ -20,7 +20,6 @@ function createBlockChannel({drizzle, web3, syncAlways}) {
       }
     })
     .on('data', (blockHeader) => {
-      console.log('blockHeader', blockHeader);
       emit({type: 'BLOCK_RECEIVED', blockHeader, drizzle, web3, syncAlways})
     })
     .on('error', error => {
@@ -128,7 +127,7 @@ function* processBlock({block, drizzle, web3, syncAlways}) {
       return
     }
 
-    console.log(block);
+    console.log('got new block');
     const txs = block.transactions
 
     if (txs.length > 0)

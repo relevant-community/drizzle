@@ -51,7 +51,7 @@ function* initializeDrizzle(action) {
       web3 = !web3.currentProvider.isMetaMask ? web3 : fallback;
     } else web3 = fallback || web3;
 
-    if (web3.currentProvider.isMetaMask) {
+    if (web3.currentProvider.isMetaMask || web3.currentProvider.isHttp) {
       // Using MetaMask, attempt block polling.
       const interval = options.polls.blocks
       yield put({type: 'BLOCKS_POLLING', drizzle, interval, web3, syncAlways})

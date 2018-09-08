@@ -23,10 +23,10 @@ export function* initializeWeb3({options}) {
 
     if (options.fallback && options.fallback.url) {
       // Attempt fallback if no web3 injection.
-      console.log('Connecting ws provider.')
 
       switch (options.fallback.type) {
         case 'ws':
+          console.log('Connecting ws provider.')
           var provider = new Web3.providers.WebsocketProvider(options.fallback.url)
 
           fallback = new Web3(provider)
@@ -51,6 +51,12 @@ export function* initializeWeb3({options}) {
           fallback.eth['cacheSendTransaction'] = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
 
           break
+        case 'http':
+          console.log('Connecting fallback http provider.')
+          var provider = new Web3.providers.HttpProvider(options.fallback.url)
+          provider.isHttp = true;
+          fallback = new Web3(provider)
+          // web3.eth.cacheSendTransaction = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
         default:
           // Invalid options; throw.
           // throw "Invalid web3 fallback provided."
