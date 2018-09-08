@@ -20,6 +20,14 @@ function* initializeDrizzle(action) {
 
     yield call(getNetworkId, {web3, options: web3Options})
 
+    let store = drizzle.store.getState();
+    let networkId = store.web3.networkId;
+    console.log(networkId);
+    if (options.networkId !== networkId) {
+      throw new Error('network');
+      return;
+    }
+
     // Get initial accounts list and balances.
     yield call(getAccounts, {web3: web3 || fallback})
     yield call(getAccountBalances, {web3: web3 || fallback})
