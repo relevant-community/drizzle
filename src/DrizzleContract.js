@@ -11,6 +11,7 @@ class DrizzleContract {
     this.contractArtifact = contractArtifact
     this.store = store
     this.fallbackContract = fallbackContract || web3Contract;
+    this.watchEvents = events;
 
     // Merge web3 contract instance into DrizzleContract instance.
     Object.assign(this, contract)
@@ -27,21 +28,24 @@ class DrizzleContract {
         this.methods[item.name].cacheSend = this.cacheSendFunction(item.name, i)
       }
     }
+    this.syncEvents();
+  }
 
-
+  syncEvents(block) {
+    console.log('sync events!');
+    let events = this.watchEvents;
     // Register event listeners if any events.
     if (events.length > 0) {
-      for (i = 0; i < events.length; i++) {
+      for (var i = 0; i < events.length; i++) {
         let event = events[i]
 
         if ( typeof event === 'object' ) {
-          store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event.eventName, eventOptions: event.eventOptions})
+          this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event.eventName, eventOptions: event.eventOptions})
         } else {
-          store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event})
+          this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event})
         }
       }
     }
-
   }
 
   fromCacheFunction(fnName, fnIndex, fn) {
