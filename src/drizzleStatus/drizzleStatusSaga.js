@@ -15,6 +15,10 @@ function* initializeDrizzle(action) {
 
     // Initialize web3 and get the current network ID.
     var {web3, fallback} = yield call(initializeWeb3, {options: web3Options})
+    if (!web3) {
+      web3 = fallback;
+      fallback = null;
+    }
     drizzle.web3 = web3
     drizzle.fallback = fallback
 
@@ -22,15 +26,17 @@ function* initializeDrizzle(action) {
 
     let store = drizzle.store.getState();
     let networkId = store.web3.networkId;
-    console.log(networkId);
+
     if (options.networkId !== networkId) {
       throw new Error('network');
       return;
     }
 
     // Get initial accounts list and balances.
-    yield call(getAccounts, {web3: web3 || fallback})
-    yield call(getAccountBalances, {web3: web3 || fallback})
+    if (!web3.currentProvider.isPortis) {
+      yield call(getAccounts, {web3: web3 || fallback})
+      yield call(getAccountBalances, {web3: web3 || fallback})
+    }
 
     // Instantiate contracts passed through via options.
     for (var i = 0; i < options.contracts.length; i++)
@@ -71,10 +77,11 @@ function* initializeDrizzle(action) {
 
   }
   catch (error) {
-    yield put({type: 'DRIZZLE_FAILED', error})
 
     console.error('Error initializing Drizzle:')
     console.error(error)
+    if (error.message.match('web3')) error.message = 'web3';
+    yield put({type: 'DRIZZLE_FAILED', error})
 
     return
   }

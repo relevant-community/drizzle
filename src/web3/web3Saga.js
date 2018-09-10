@@ -51,6 +51,7 @@ export function* initializeWeb3({options}) {
           fallback.eth['cacheSendTransaction'] = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
 
           break
+        case 'https':
         case 'http':
           console.log('Connecting fallback http provider.')
           var provider = new Web3.providers.HttpProvider(options.fallback.url)
