@@ -125,10 +125,12 @@ function* callGetContractEvent({contract, eventName, eventOptions}) {
   const name = contract.contractName || contract.address
   let events;
 
+  let fromBlock = eventOptions ? eventOptions.fromBlock : 0;
+
   try {
     events = yield eventEnabledContract.getPastEvents(eventName, {
-      // filter: {_from: addr},
-      fromBlock: 0,
+      // filter: {_from: eventOptions.address},
+      fromBlock,
       toBlock: 'latest'
     })
   } catch (e) {
@@ -331,10 +333,10 @@ function* contractsSaga() {
   yield takeEvery('CONTRACT_SYNCING', callSyncContract)
 
   // yield takeEvery('LISTEN_FOR_EVENT', callListenForContractEvent)
-
   yield takeEvery('LISTEN_FOR_EVENT', callGetContractEvent)
-  yield takeEvery('ADD_CONTRACT', addContract)
+
   yield takeEvery('GET_CONTRACT_EVENT', callGetContractEvent)
+  yield takeEvery('ADD_CONTRACT', addContract)
 }
 
 export default contractsSaga;

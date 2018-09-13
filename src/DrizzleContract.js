@@ -48,6 +48,16 @@ class DrizzleContract {
     }
   }
 
+  syncEvent(block, event) {
+    console.log('sync single event');
+    // Register event listener for a given event.
+    if ( typeof event === 'object' ) {
+      this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event.eventName, eventOptions: event.eventOptions})
+    } else {
+      this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event})
+    }
+  }
+
   fromCacheFunction(fnName, fnIndex, fn) {
     var contract = this
 
