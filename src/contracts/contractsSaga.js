@@ -330,7 +330,7 @@ function* contractsSaga() {
   yield takeEvery('CALL_CONTRACT_FN', callCallContractFn)
   yield takeEvery('CONTRACT_SYNCING', callSyncContract)
 
-  // yield takeEvery('LISTEN_FOR_EVENT', callPollContractEvent)
+  // yield takeEvery('LISTEN_FOR_EVENT', callListenForContractEvent)
 
   yield takeEvery('LISTEN_FOR_EVENT', callGetContractEvent)
   yield takeEvery('ADD_CONTRACT', addContract)

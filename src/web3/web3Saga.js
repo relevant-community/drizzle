@@ -54,9 +54,18 @@ export function* initializeWeb3({options}) {
         case 'https':
         case 'http':
           console.log('Connecting fallback http provider.')
-          var provider = new Web3.providers.HttpProvider(options.fallback.url)
+          var provider = new Web3.providers.HttpProvider(
+            options.fallback.url,
+            { headers: [
+              {name: 'Access-Control-Allow-Origin', value: '*'},
+              { name: 'Access-Control-Allow-Methods', value: '*'},
+              {name: 'Access-Control-Allow-Headers', value: '*'}
+            ]}
+          )
           provider.isHttp = true;
           fallback = new Web3(provider)
+          console.log(provider)
+          console.log(Web3)
           // web3.eth.cacheSendTransaction = (txObject) => put({type: 'SEND_WEB3_TX', txObject, stackId, web3})
         default:
           // Invalid options; throw.
@@ -160,7 +169,7 @@ function* callSendTx({txObject, stackId, web3}) {
 }
 
 function* web3Saga() {
-  yield takeLatest('NETWORK_ID_FAILED', getNetworkId)
+  // yield takeLatest('NETWORK_ID_FAILED', getNetworkId)
   yield takeEvery('SEND_WEB3_TX', callSendTx)
 }
 

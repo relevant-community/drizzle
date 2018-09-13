@@ -18,6 +18,7 @@ function* initializeDrizzle(action) {
     if (!web3) {
       web3 = fallback;
       fallback = null;
+      yield put({type: 'DRIZZLE_WARNING', warning: 'metamask'})
     }
     drizzle.web3 = web3
     drizzle.fallback = fallback
