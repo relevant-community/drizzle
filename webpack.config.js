@@ -3,15 +3,18 @@ const path = require('path');
 process.env.BABEL_ENV = 'production';
 
 module.exports = {
-  entry: ['./src/index.js'],
+  devtool: 'inline-source-map',
+  entry: './src/index.js',
   output: {
     filename: 'drizzle.js',
     library: 'drizzle',
     libraryTarget: 'umd',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'dist'),
+    globalObject: 'typeof self !== \'undefined\' ? self : this',
   },
+  mode: 'development',
   module: {
-    loaders: [{
+    rules: [{
       test: /\.(js)$/,
       include: path.resolve(__dirname, 'src'),
       loader: 'babel-loader',
@@ -20,16 +23,18 @@ module.exports = {
         plugins: [
           require('babel-plugin-transform-runtime'),
           require('babel-plugin-transform-es2015-arrow-functions'),
-          require('babel-plugin-transform-object-rest-spread')
+          require('babel-plugin-transform-object-rest-spread'),
+          require('babel-plugin-syntax-async-functions')
         ]
       }
     }]
   },
   externals: {
-    web3: 'web3',
+    'eth-block-tracker': 'eth-block-tracker-es5',
+    'redux': 'redux',
     'redux-saga': 'redux-saga',
-    'redux-thunk': 'redux-thunk',
-    'truffle-contract': 'truffle-contract',
-    'redux': 'redux'
+    'web3': 'web3',
+    'is-plain-object': 'is-plain-object',
+    'deepmerge': 'deepmerge'
   }
 };

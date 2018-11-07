@@ -1,3 +1,5 @@
+import { generateContractInitialState } from '../generateContractInitialState'
+
 const initialState = {}
 
 const contractsReducer = (state = initialState, action) => {
@@ -5,10 +7,10 @@ const contractsReducer = (state = initialState, action) => {
    * Contract Status
    */
 
-  if (action.type === 'INIT_CONTRACT_STATE') {
+  if (action.type === 'CONTRACT_INITIALIZING') {
     return {
       ...state,
-      [action.contractName]: action.initialState
+      [action.contractConfig.contractName]: generateContractInitialState(action.contractConfig)
     }
   }
 
@@ -21,21 +23,22 @@ const contractsReducer = (state = initialState, action) => {
         initialized: true,
         synced: true,
         events: [],
-        methods: action.methods,
-        address: action.address
+        methods: action.contract.methods,
+        address: action.contract.address,
       }
     }
   }
 
   if (action.type === 'CONTRACT_SYNCING')
   {
-    const contractName = action.contract.contractArtifact.contractName
+    const contractName = action.contract.contractName
 
     return {
       ...state,
       [contractName]: {
         ...state[contractName],
-        synced: false
+        synced: false,
+        syncing: true
       }
     }
   }
@@ -46,7 +49,8 @@ const contractsReducer = (state = initialState, action) => {
       ...state,
       [action.contractName]: {
         ...state[action.contractName],
-        synced: true
+        synced: true,
+        syncing: false
       }
     }
   }
@@ -80,7 +84,8 @@ const contractsReducer = (state = initialState, action) => {
               ...state[action.name].state[action.variable][action.argsHash],
               args: action.args,
               fnIndex: action.fnIndex,
-              value: action.value
+              value: action.value,
+              syncing: false
             }
           }
         }
@@ -97,12 +102,13 @@ const contractsReducer = (state = initialState, action) => {
         state: {
           ...state[action.name].state,
           [action.variable]: {
-            ...state[action.name][action.variable],
+            ...state[action.name].state[action.variable],
             [action.argsHash]: {
-              ...state[action.name][action.variable][action.argsHash],
+              ...state[action.name].state[action.variable][action.argsHash],
               args: action.args,
               fnIndex: action.fnIndex,
-              error: action.error
+              error: action.error,
+              syncing: false
             }
           }
         }

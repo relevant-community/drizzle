@@ -1,7 +1,4 @@
-const initialState = {
-  ids: [],
-  balances: {}
-}
+const initialState = []
 
 const accountsReducer = (state = initialState, action) => {
   if (action.type === 'ACCOUNTS_FETCHING')
@@ -11,25 +8,16 @@ const accountsReducer = (state = initialState, action) => {
 
   if (action.type === 'ACCOUNTS_FETCHED')
   {
-    return Object.assign({}, state, { ids: action.accounts })
-  }
-
-  if (action.type === 'BALANCES_FETCHED')
-  {
-    let balances = {};
-    action.balances.forEach(balance => balances = { ...balances, ...balance })
-    return Object.assign({}, state, { balances: balances })
-  }
-
-  if (action.type === 'ACCOUNT_BALANCE_FETCHED')
-  {
-    return Object.assign({}, state,
-      {
-        balances: {
-          ...state.balances,
-          ...action.balance
-        }
-      })
+    let needsUpdate;
+    let acc = action.accounts || [];
+    let intersect = acc.filter(x => state.includes(x));
+    if (intersect.length === acc.length) {
+      return state;
+    }
+    return [
+      ...state,
+      ...action.accounts
+    ]
   }
 
   return state

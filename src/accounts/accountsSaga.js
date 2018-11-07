@@ -1,28 +1,68 @@
-import { call, put, takeLatest, all, takeEvery } from 'redux-saga/effects'
+import { END, eventChannel } from 'redux-saga'
+import { call, put, take, takeLatest } from 'redux-saga/effects'
+import { getAccountBalances } from '../accountBalances/accountBalancesSaga'
 
-function getAccounts(web3) {
-  return web3.eth.getAccounts().then((accounts) => {
-    return accounts
-  })
-}
+/*
+ * Fetch Accounts List
+ */
 
-function getBalance(account, web3) {
-  return web3.eth.getBalance(account).then((balance) => {
-    return { [account]: balance }
-  })
-}
+export function* getAccounts(action) {
+  const web3 = action.web3
 
-function* callGetAccounts(action) {
-  const accounts = yield call(getAccounts, action.web3)
+  try {
+    if (!web3) throw 'missing web3';
+    const accounts = yield call(web3.eth.getAccounts)
 
-  if (!accounts) {
-    console.error('No accounts found!')
-    yield call(action.reject, {source: 'accounts', message: 'Failed to get accounts.'})
+    if (!accounts) {
+      throw 'No accounts found!'
+    }
+
+    yield put({type: 'ACCOUNTS_FETCHED', accounts})
   }
+  catch (error) {
+    yield put({type: 'ACCOUNTS_FAILED', error})
+    console.error('Error fetching accounts:')
+    console.error(error)
+  }
+}
 
-  yield put({type: 'ACCOUNTS_FETCHED', accounts})
+/*
+ * Poll for Account Changes
+ */
 
-  yield call(action.resolve)
+function* createAccountsPollChannel({interval, web3}) {
+  return eventChannel(emit => {
+    const persistedWeb3 = web3
+
+    const accountsPoller = setInterval(() => {
+      emit({type: 'SYNCING_ACCOUNTS', persistedWeb3})
+    }, interval) // options.polls.accounts
+    
+    const unsubscribe = () => {
+      clearInterval(accountsPoller)
+    }
+
+    return unsubscribe
+  })
+}
+  
+function* callCreateAccountsPollChannel({interval, web3}) {
+  const accountsChannel = yield call(createAccountsPollChannel, {interval, web3})
+  
+  try {
+    while (true) {
+      var event = yield take(accountsChannel)
+
+      if (event.type === 'SYNCING_ACCOUNTS') {      
+        yield call(getAccounts, {web3: event.persistedWeb3})
+        yield call(getAccountBalances, {web3: event.persistedWeb3})  
+      }
+
+      yield put(event)
+    }
+  } finally {
+    accountsChannel.close()
+  }
 }
 
 function* callGetBalances(action) {
@@ -49,9 +89,8 @@ function* callGetAccountBalance(action) {
 }
 
 function* accountsSaga() {
-  yield takeLatest('ACCOUNTS_FETCHING', callGetAccounts)
-  yield takeLatest('GET_BALANCES', callGetBalances)
-  yield takeEvery('GET_ACCOUNT_BALANCE', callGetAccountBalance)
+  yield takeLatest('ACCOUNTS_FETCHING', getAccounts)
+  yield takeLatest('ACCOUNTS_POLLING', callCreateAccountsPollChannel)
 }
 
 export default accountsSaga;

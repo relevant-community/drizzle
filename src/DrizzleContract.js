@@ -1,64 +1,84 @@
+import merge from 'deepmerge'
+
 class DrizzleContract {
-  constructor(contractArtifact, web3, store, events = []) {
-    this.contractArtifact = contractArtifact
-    this.abi = contractArtifact.abi
+  constructor(web3Contract, web3, name, store, events = [], contractArtifact = {}, fallbackContract) {
+    var contract = web3Contract || fallbackContract;
+
+    this.abi = contract.options.jsonInterface
+    this.address = contract.options.address
     this.web3 = web3
+    this.contractName = name
+    this.contractArtifact = contractArtifact
     this.store = store
+    this.fallbackContract = fallbackContract || web3Contract;
+    this.watchEvents = events;
 
-    var networkId = 0
+    // Merge web3 contract instance into DrizzleContract instance.
+    Object.assign(this, contract)
 
-    // Instantiate the contract.
-    web3.eth.net.getId()
-    .then((networkId) => {
-      var web3Contract = new web3.eth.Contract(
-        this.abi,
-        this.contractArtifact.networks[networkId].address,
-        {
-          from: this.store.getState().accounts[0],
-          data: this.contractArtifact.deployedBytecode
-        }
-      )
+    for (var i = 0; i < this.abi.length; i++) {
+      var item = this.abi[i]
 
-      this.initContractState();
-
-      // Merge web3 contract instance into DrizzleContract instance.
-      Object.assign(this, web3Contract)
-
-      for (var i = 0; i < this.abi.length; i++) {
-        var item = this.abi[i]
-
-        if (item.type == "function" && item.constant === true) {
-          this.methods[item.name].cacheCall = this.cacheCallFunction(item.name, i)
-        }
-
-        if (item.type == "function" && item.constant === false) {
-          this.methods[item.name].cacheSend = this.cacheSendFunction(item.name, i)
-        }
+      if (item.type == "function" && item.constant === true) {
+        this.methods[item.name].cacheCall = this.cacheCallFunction(item.name, i)
+        this.methods[item.name].fromCache = this.fromCacheFunction(item.name, i)
       }
 
-      // Register event listeners if any events.
-      if (events.length > 0) {
-        for (i = 0; i < events.length; i++) {
-          const eventName = events[i]
+      if (item.type == "function" && item.constant === false) {
+        this.methods[item.name].cacheSend = this.cacheSendFunction(item.name, i)
+      }
+    }
+    this.syncEvents();
+  }
 
-          store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName})
+  syncEvents(block) {
+    console.log('sync events!');
+    let events = this.watchEvents;
+    // Register event listeners if any events.
+    if (events.length > 0) {
+      for (var i = 0; i < events.length; i++) {
+        let event = events[i]
+
+        if ( typeof event === 'object' ) {
+          this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event.eventName, eventOptions: event.eventOptions})
+        } else {
+          this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event})
         }
       }
+    }
+  }
 
-      const name = contractArtifact.contractName
-      let methods = this.methods;
-      let address = this._address;
+  syncEvent(block, event) {
+    console.log('sync single event');
+    // Register event listener for a given event.
+    if ( typeof event === 'object' ) {
+      this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event.eventName, eventOptions: event.eventOptions})
+    } else {
+      this.store.dispatch({type: 'LISTEN_FOR_EVENT', contract: this, eventName: event})
+    }
+  }
 
-      store.dispatch({type: 'CONTRACT_INITIALIZED', name, methods, address})
+  fromCacheFunction(fnName, fnIndex, fn) {
+    var contract = this
 
-      return networkId
-    })
-    .catch((error) => {
-      console.error('Error retrieving network ID:')
-      console.error(error)
+    return function() {
+      // Collect args and hash to use as key, 0x0 if no args
+      var argsHash = '0x0'
+      var args = arguments
 
-      return
-    })
+      if (args.length > 0) {
+        argsHash = contract.generateArgsHash(args)
+      }
+
+      const contractName = contract.contractName
+      if (!contract.store.getState().contracts[contractName].state) return;
+      const functionState = contract.store.getState().contracts[contractName].state[fnName]
+
+      // If call result is in state return value instead of calling
+      if (argsHash in functionState && functionState[argsHash].value) {
+        return functionState[argsHash].value;
+      }
+    }
   }
 
   initContractState() {
@@ -95,21 +115,16 @@ class DrizzleContract {
       if (args.length > 0) {
         argsHash = contract.generateArgsHash(args)
       }
-      const contractName = contract.contractArtifact.contractName
-      const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
-      // If call result is in state and fresh, return value instead of calling
-      if (argsHash in functionState) {
-        if (contract.store.getState().contracts[contractName].synced === true) {
-          return argsHash
-        }
-      }
+      const contractName = contract.contractName
+      if (!contract.store.getState().contracts[contractName].state) return;
+      const functionState = contract.store.getState().contracts[contractName].state[fnName]
 
       // Otherwise, call function and update store
       contract.store.dispatch({type: 'CALL_CONTRACT_FN', contract, fnName, fnIndex, args, argsHash})
 
       // Return nothing because state is currently empty.
-      return argsHash
+      return null;
     }
   }
 
@@ -126,14 +141,10 @@ class DrizzleContract {
       // Add ID to "transactionStack" with empty value
       contract.store.dispatch({type: 'PUSH_TO_STACK'})
 
-      // TODO: FOR DEMO, MOVE MOVE MOVE
-      //const name = contract.contractArtifact.contractName
-      //contract.store.dispatch({type: 'CONTRACT_SYNC_IND', contractName: name})
-      
       // Dispatch tx to saga
       // When txhash received, will be value of stack ID
       contract.store.dispatch({type: 'SEND_CONTRACT_TX', contract, fnName, fnIndex, args, stackId})
-     
+
       // return stack ID
       return stackId
     }
@@ -154,7 +165,18 @@ class DrizzleContract {
           argToHash = JSON.stringify(argToHash)
         }
 
-        var hashPiece = web3.utils.sha3(argToHash)
+        // Convert number to strong to allow hashing
+        if (typeof argToHash === 'number') {
+          argToHash = argToHash.toString()
+        }
+
+        // This check is in place for web3 v0.x
+        if ('utils' in web3) {
+          var hashPiece = web3.utils.sha3(argToHash)
+        }
+        else {
+          var hashPiece = web3.sha3(argToHash)
+        }
 
         hashString += hashPiece
       }

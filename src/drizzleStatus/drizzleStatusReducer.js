@@ -7,12 +7,27 @@ const drizzleStatusReducer = (state = initialState, action) => {
    * Drizzle Status
    */
 
+   if (action.type === 'DRIZZLE_WARNING') {
+      return {
+        ...state,
+        warning: action.warning,
+      }
+   }
+
+  if (action.type === 'DRIZZLE_FAILED')
+  {
+    return {
+      ...state,
+      error: action.error.message,
+    }
+  }
+
   if (action.type === 'DRIZZLE_INITIALIZED')
   {
     return {
       ...state,
       initialized: true,
-      // drizzleInstance: action.drizzleInstance
+      error: null,
     }
   }
   return state
