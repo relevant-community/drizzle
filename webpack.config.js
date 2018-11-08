@@ -30,7 +30,7 @@ module.exports = {
     }]
   },
   externals: {
-    'eth-block-tracker': 'eth-block-tracker-es5',
+    'eth-block-tracker': 'eth-block-tracker',
     'redux': 'redux',
     'redux-saga': 'redux-saga',
     'web3': 'web3',

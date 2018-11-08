@@ -1,6 +1,8 @@
 import { END, eventChannel } from 'redux-saga'
 import { call, put, take, takeEvery, takeLatest, all } from 'redux-saga/effects'
-const BlockTracker = require('eth-block-tracker')
+import BlockTracker from 'eth-block-tracker';
+
+const createInfuraProvider = require('eth-json-rpc-infura/src/createProvider')
 
 /*
  * Listen for Blocks
@@ -54,24 +56,41 @@ function* callCreateBlockChannel({drizzle, web3, syncAlways}) {
 
 function createBlockPollChannel({drizzle, interval, web3, syncAlways}) {
   return eventChannel(emit => {
-    const blockTracker = new BlockTracker({ provider: web3.currentProvider, pollingInterval: interval})
 
-    blockTracker.on('latest', (block) => {
-      emit({type: 'BLOCK_FOUND', block, drizzle, web3, syncAlways})
-    })
+    // const provider = createInfuraProvider({ network: 'rinkeby' })
+    // const provider = web3.currentProvider
+    const provider = global.ethereum
+
+    console.log(interval);
+    const blockTracker = new BlockTracker({ provider, pollingInterval: interval})
+
+    // console.log(blockTracker.getCurrentBlock())
 
     blockTracker
-    .start()
-    .catch((error) => {
+    .on('latest', (block) => {
+      console.log('got block ', Number(block))
+      let blockHeader = { number: Number(block) };
+      // emit({type: 'BLOCK_FOUND', block, drizzle, web3, syncAlways})
+      emit({type: 'BLOCK_RECEIVED', blockHeader, drizzle, web3, syncAlways})
+    })
+    .on('error', error => {
       emit({type: 'BLOCKS_FAILED', error})
       emit(END)
     })
 
-    const unsubscribe = () => {
-      blockTracker.stop()
-    }
+    // blockTracker
+    // .start()
+    // .catch((error) => {
+    //   emit({type: 'BLOCKS_FAILED', error})
+    //   emit(END)
+    // })
 
-    return unsubscribe
+    // const unsubscribe = () => {
+    //   blockTracker.stop()
+    // }
+
+    // return unsubscribe
+    return () => {};
   })
 }
 
@@ -127,7 +146,9 @@ function* processBlock({block, drizzle, web3, syncAlways}) {
       return
     }
 
-    console.log('got new block');
+    console.log('got new block ');
+    console.log(block);
+    if (!block) return;
     const txs = block.transactions
 
     if (txs.length > 0)

@@ -24,7 +24,8 @@
   "license": "ISC",
   "dependencies": {
     "deepmerge": "^2.1.1",
-    "eth-block-tracker-es5": "^2.3.2",
+    "eth-block-tracker": "4.1.0",
+    "eth-json-rpc-infura": "^3.1.2",
     "is-plain-object": "^2.0.4",
     "redux": "^4.0.0",
     "redux-saga": "^0.16.0",
