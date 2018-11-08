@@ -59,11 +59,24 @@ function createBlockPollChannel({drizzle, interval, web3, syncAlways}) {
     const provider = web3.currentProvider
     const blockTracker = new BlockTracker({ provider, pollingInterval: interval})
 
+    blockTracker.getCurrentBlock()
+
     blockTracker
-    .on('latest', (block) => {
-      console.log('got block ', Number(block))
-      let blockHeader = { number: Number(block) };
-      // emit({type: 'BLOCK_FOUND', block, drizzle, web3, syncAlways})
+    .on('sync', ({ newBlock, oldBlock }) => {
+      let newB = Number(newBlock);
+      let oldB = Number(oldBlock);
+      console.log('new block ', Number(newB))
+      // console.log('old block ', Number(oldB))
+      let skipped = oldB ? newB - oldB : 0
+
+      while(skipped > 1) {
+        let blockHeader = { number: oldB + 1 };
+        emit({type: 'BLOCK_RECEIVED', blockHeader, drizzle, web3, syncAlways})
+        skipped--
+        console.log('getting skipped blocks ', skipped, oldB + 1 );
+      }
+
+      let blockHeader = { number: newB };
       emit({type: 'BLOCK_RECEIVED', blockHeader, drizzle, web3, syncAlways})
     })
     .on('error', error => {
