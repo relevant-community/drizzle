@@ -245,7 +245,6 @@ function* callCallContractFn({contract, fnName, fnIndex, args, argsHash, sync = 
     }
   }
 
-  console.log('calling fn ', fnName, args)
   // Create the transaction object and execute the call.
   const txObject = yield call(contract.methods[fnName], ...args)
 
@@ -306,7 +305,6 @@ function* callSyncContract(action) {
     {
       const fnIndex = contractFnsState[fnName][argsHash].fnIndex
       const args = contractFnsState[fnName][argsHash].args
-      console.log('updating contract', fnName, args)
 
       // Pull args and call fn for each given function
       // keeping for pre-v1.1.5 compatibility with CALL_CONTRACT_FN event.

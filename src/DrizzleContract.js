@@ -32,7 +32,7 @@ class DrizzleContract {
   }
 
   syncEvents(block) {
-    console.log('sync events!');
+    // console.log('sync events!');
     let events = this.watchEvents;
     // Register event listeners if any events.
     if (events.length > 0) {

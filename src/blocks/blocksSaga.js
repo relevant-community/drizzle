@@ -2,7 +2,7 @@ import { END, eventChannel } from 'redux-saga'
 import { call, put, take, takeEvery, takeLatest, all } from 'redux-saga/effects'
 import BlockTracker from 'eth-block-tracker';
 
-const createInfuraProvider = require('eth-json-rpc-infura/src/createProvider')
+// const createInfuraProvider = require('eth-json-rpc-infura/src/createProvider')
 
 /*
  * Listen for Blocks
@@ -56,15 +56,8 @@ function* callCreateBlockChannel({drizzle, web3, syncAlways}) {
 
 function createBlockPollChannel({drizzle, interval, web3, syncAlways}) {
   return eventChannel(emit => {
-
-    // const provider = createInfuraProvider({ network: 'rinkeby' })
-    // const provider = web3.currentProvider
-    const provider = global.ethereum
-
-    console.log(interval);
+    const provider = web3.currentProvider
     const blockTracker = new BlockTracker({ provider, pollingInterval: interval})
-
-    // console.log(blockTracker.getCurrentBlock())
 
     blockTracker
     .on('latest', (block) => {
@@ -78,18 +71,6 @@ function createBlockPollChannel({drizzle, interval, web3, syncAlways}) {
       emit(END)
     })
 
-    // blockTracker
-    // .start()
-    // .catch((error) => {
-    //   emit({type: 'BLOCKS_FAILED', error})
-    //   emit(END)
-    // })
-
-    // const unsubscribe = () => {
-    //   blockTracker.stop()
-    // }
-
-    // return unsubscribe
     return () => {};
   })
 }
@@ -146,8 +127,8 @@ function* processBlock({block, drizzle, web3, syncAlways}) {
       return
     }
 
-    console.log('got new block ');
-    console.log(block);
+    // console.log('got new block ');
+    // console.log(block);
     if (!block) return;
     const txs = block.transactions
 
