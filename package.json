@@ -28,8 +28,7 @@
     "is-plain-object": "^2.0.4",
     "redux": "^4.0.0",
     "redux-saga": "^0.16.0",
-    "web3": "^1.0.0-beta.37",
-    "web3-eth-ens": "^1.0.0-beta.36"
+    "web3": "^1.0.0-beta.37"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
@@ -39,6 +38,7 @@
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.7.0",
     "webpack-cli": "^3.0.8",
-    "webpack": "^4.12.0"
+    "webpack": "^4.12.0",
+    "web3-eth-ens": "^1.0.0-beta.37"
   }
 }
